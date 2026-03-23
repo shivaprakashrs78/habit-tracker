@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="center">
+
+<div class="card">
+    <h2>🔒 Habit Tracker</h2>
+    <input type="password" id="pass" placeholder="Enter password">
+    <button onclick="login()">Login</button>
+</div>
+
+<script>
+async function login() {
+    const password = document.getElementById("pass").value;
+
+    const res = await fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ password })
+    });
+
+    if (res.status === 200) {
+        localStorage.setItem("password", password);
+        window.location.href = "index.html";
+    } else {
+        alert("Wrong Password");
+    }
+}
+</script>
+
+</body>
+</html>
