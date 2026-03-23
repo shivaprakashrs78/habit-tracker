@@ -79,3 +79,18 @@ li {
 .low { background: #a5d6a7; }
 .medium { background: #66bb6a; }
 .high { background: #2e7d32; }
+
+li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+li button {
+    background: red;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}

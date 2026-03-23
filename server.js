@@ -110,3 +110,19 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log("Running on port " + PORT);
 });
+
+app.post('/delete', checkAuth, (req, res) => {
+    const data = readData();
+    const index = req.body.index;
+
+    // remove from tasks
+    data.tasks.splice(index, 1);
+
+    // remove from all history
+    for (let d in data.history) {
+        data.history[d].splice(index, 1);
+    }
+
+    writeData(data);
+    res.sendStatus(200);
+});

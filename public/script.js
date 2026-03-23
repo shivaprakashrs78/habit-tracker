@@ -1,56 +1,64 @@
 const password = localStorage.getItem("password");
 
+// Redirect if not logged in
 if (!password) {
     window.location.href = "login.html";
 }
 
+// ================= LOAD MAIN DATA =================
 async function loadData() {
     const res = await fetch('/data', {
         headers: { password }
     });
+
+    if (res.status === 401) {
+        window.location.href = "login.html";
+        return;
+    }
 
     const data = await res.json();
 
     const list = document.getElementById('taskList');
     list.innerHTML = '';
 
-    let done = 0;
+    let completed = 0;
 
-    data.tasks.forEach((t, i) => {
+    data.tasks.forEach((task, i) => {
+        const done = data.today[i];
+
+        if (done) completed++;
+
         const li = document.createElement('li');
 
-        if (data.today[i]) done++;
-
-        li.textContent = t + (data.today[i] ? " ✅" : " ❌");
-
-        li.onclick = async () => {
-            await fetch('/toggle', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    password
-                },
-                body: JSON.stringify({ index: i })
-            });
-            loadData();
-        };
+        li.innerHTML = `
+            <span onclick="toggleTask(${i})">
+                ${task} ${done ? "✅" : "❌"}
+            </span>
+            <button onclick="deleteTask(${i})">❌</button>
+        `;
 
         list.appendChild(li);
     });
 
+    // DAILY SCORE
     const percent = data.tasks.length === 0 ? 0 :
-        Math.round((done / data.tasks.length) * 100);
+        Math.round((completed / data.tasks.length) * 100);
 
-    document.getElementById("scoreBox").innerText = percent + "%";
+    document.getElementById("scoreBox").innerText =
+        percent + "%";
 
-    drawChart(done, data.tasks.length);
+    drawChart(completed, data.tasks.length);
 
     loadStreaks();
     loadHeatmap();
 }
 
+// ================= ADD TASK =================
 async function addTask() {
-    const text = document.getElementById('taskInput').value;
+    const input = document.getElementById('taskInput');
+    const text = input.value.trim();
+
+    if (!text) return;
 
     await fetch('/add', {
         method: 'POST',
@@ -61,14 +69,51 @@ async function addTask() {
         body: JSON.stringify({ text })
     });
 
+    input.value = "";
     loadData();
 }
 
-setInterval(() => {
-    document.getElementById("datetime").innerText =
-        new Date().toLocaleString();
-}, 1000);
+// ================= TOGGLE =================
+async function toggleTask(i) {
+    await fetch('/toggle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            password
+        },
+        body: JSON.stringify({ index: i })
+    });
 
+    loadData();
+}
+
+// ================= DELETE =================
+async function deleteTask(i) {
+    if (!confirm("Delete this task?")) return;
+
+    await fetch('/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            password
+        },
+        body: JSON.stringify({ index: i })
+    });
+
+    loadData();
+}
+
+// ================= DATE & TIME =================
+function updateDateTime() {
+    const now = new Date();
+    document.getElementById("datetime").innerText =
+        now.toLocaleDateString() + " | " + now.toLocaleTimeString();
+}
+
+setInterval(updateDateTime, 1000);
+updateDateTime();
+
+// ================= GRAPH =================
 function drawChart(done, total) {
     const ctx = document.getElementById('chart');
 
@@ -77,7 +122,7 @@ function drawChart(done, total) {
     window.chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Done', 'Left'],
+            labels: ['Done', 'Remaining'],
             datasets: [{
                 data: [done, total - done]
             }]
@@ -85,7 +130,7 @@ function drawChart(done, total) {
     });
 }
 
-// STREAK
+// ================= STREAK =================
 async function loadStreaks() {
     const res = await fetch('/history', {
         headers: { password }
@@ -93,6 +138,9 @@ async function loadStreaks() {
 
     const history = await res.json();
     const box = document.getElementById("streaks");
+
+    if (!box) return;
+
     box.innerHTML = "";
 
     const dates = Object.keys(history).sort().reverse();
@@ -110,12 +158,12 @@ async function loadStreaks() {
         }
 
         const div = document.createElement("div");
-        div.innerText = `Task ${i+1} 🔥 ${streak} days`;
+        div.innerText = `Task ${i + 1} 🔥 ${streak} days`;
         box.appendChild(div);
     }
 }
 
-// HEATMAP
+// ================= HEATMAP =================
 async function loadHeatmap() {
     const res = await fetch('/history', {
         headers: { password }
@@ -123,6 +171,9 @@ async function loadHeatmap() {
 
     const history = await res.json();
     const heatmap = document.getElementById("heatmap");
+
+    if (!heatmap) return;
+
     heatmap.innerHTML = "";
 
     const dates = Object.keys(history).sort();
@@ -147,4 +198,5 @@ async function loadHeatmap() {
     });
 }
 
+// ================= START =================
 loadData();
